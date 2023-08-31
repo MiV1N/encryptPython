@@ -65,6 +65,7 @@ static PyObject *run_mod(mod_ty, PyObject *, PyObject *, PyObject *,
                           PyCompilerFlags *, PyArena *);
 static PyObject *run_pyc_file(FILE *, const char *, PyObject *, PyObject *,
                               PyCompilerFlags *);
+static PyObject *run_pye_file(FILE *, const char *, PyObject *, PyObject *,PyCompilerFlags *);
 static void err_input(perrdetail *);
 static void err_free(perrdetail *);
 static int PyRun_InteractiveOneObjectEx(FILE *, PyObject *, PyCompilerFlags *);
@@ -336,6 +337,17 @@ maybe_pyc_file(FILE *fp, const char* filename, const char* ext, int closeit)
     return 0;
 }
 
+/* Check whether a file maybe a pye file: Look at the extension,
+   the file type, and, if we may close it, at the first few bytes. */
+
+static int
+maybe_pye_file(FILE *fp, const char* filename, const char* ext, int closeit)
+{
+    if (strcmp(ext, ".pye") == 0)
+        return 1;
+    return 0;
+}
+
 static int
 set_main_loader(PyObject *d, const char *filename, const char *loader_name)
 {
@@ -417,6 +429,24 @@ PyRun_SimpleFileExFlags(FILE *fp, const char *filename, int closeit,
             goto done;
         }
         v = run_pyc_file(pyc_fp, filename, d, d, flags);
+
+    } else if (maybe_pye_file(fp, filename, ext, closeit)) {
+        FILE *pyc_fp;
+        /* Try to run a pye file. First, re-open in binary */
+        if (closeit)
+            fclose(fp);
+        if ((pyc_fp = _Py_fopen(filename, "rb")) == NULL) {
+            fprintf(stderr, "python: Can't reopen .pye file\n");
+            goto done;
+        }
+
+        if (set_main_loader(d, filename, "SourcelessFileLoader") < 0) {
+            fprintf(stderr, "python: failed to set __main__.__loader__\n");
+            ret = -1;
+            fclose(pyc_fp);
+            goto done;
+        }
+        v = run_pye_file(pyc_fp, filename, d, d, flags);
     } else {
         /* When running from stdin, leave __main__.__loader__ alone */
         if (strcmp(filename, "<stdin>") != 0 &&
@@ -1190,6 +1220,54 @@ error:
     fclose(fp);
     return NULL;
 }
+
+
+
+static PyObject *
+run_pye_file(FILE *fp, const char *filename, PyObject *globals,
+             PyObject *locals, PyCompilerFlags *flags)
+{
+    PyCodeObject *co;
+    PyObject *v;
+    long magic;
+    long PyImport_GetMagicNumber(void);
+
+    /*skip pye file header*/
+    (void) PyMarshal_ReadLongFromFile(fp);
+
+    magic = PyMarshal_ReadLongFromFile(fp);
+    if (magic != PyImport_GetMagicNumber()) {
+        if (!PyErr_Occurred())
+            PyErr_SetString(PyExc_RuntimeError,
+                       "Bad magic number in .pye file");
+        goto error;
+    }
+    /* Skip the rest of the header. */
+    (void) PyMarshal_ReadLongFromFile(fp);
+    (void) PyMarshal_ReadLongFromFile(fp);
+    (void) PyMarshal_ReadLongFromFile(fp);
+    if (PyErr_Occurred()) {
+        goto error;
+    }
+    v = PyMarshal_ReadLastObjectFromEncryptedFile(fp);
+    if (v == NULL || !PyCode_Check(v)) {
+        Py_XDECREF(v);
+        PyErr_SetString(PyExc_RuntimeError,
+                   "Bad code object in .pye file");
+        goto error;
+    }
+    fclose(fp);
+    co = (PyCodeObject *)v;
+    v = run_eval_code_obj(co, globals, locals);
+    if (v && flags)
+        flags->cf_flags |= (co->co_flags & PyCF_MASK);
+    Py_DECREF(co);
+    return v;
+error:
+    fclose(fp);
+    return NULL;
+}
+
 
 PyObject *
 Py_CompileStringObject(const char *str, PyObject *filename, int start,

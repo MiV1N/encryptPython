@@ -13,6 +13,7 @@
 #include "code.h"
 #include "marshal.h"
 #include "../Modules/hashtable.h"
+#include "unis_encrypt.h"
 
 /*[clinic input]
 module marshal
@@ -1542,6 +1543,61 @@ PyMarshal_ReadLastObjectFromFile(FILE *fp)
 
 #undef REASONABLE_FILE_LIMIT
 }
+
+
+/* If we can get the size of the file up-front, and it's reasonably small,
+ * read it in one gulp and delegate to ...FromString() instead.  Much quicker
+ * than reading a byte at a time from file; speeds .pyc imports.
+ * CAUTION:  since this may read the entire remainder of the file, don't
+ * call it unless you know you're done with the file.
+ */
+PyObject *
+PyMarshal_ReadLastObjectFromEncryptedFile(FILE *fp)
+{
+
+/* REASONABLE_FILE_LIMIT is by defn something big enough for Tkinter.pyc. */
+#define REASONABLE_FILE_LIMIT (1L << 18)
+    off_t filesize;
+    filesize = getfilesize(fp);
+
+    if (filesize > 0 && filesize <= REASONABLE_FILE_LIMIT) {
+        char* pBuf = (char *)PyMem_MALLOC(filesize);
+        if (pBuf != NULL) {
+            size_t n = fread(pBuf, 1, (size_t)filesize, fp);
+
+            // ============decrypt============
+            AES_ENCODE_DATA plainTextData;
+            plainTextData.enBuffer = (unsigned char *) pBuf;
+            plainTextData.bufferSize = n;
+            plainTextData.textBuffer = NULL;
+
+            if(EXIT_SUCCESS != unis_aes_decrypt(&plainTextData)){
+		        printf("Error: Decryption failed.\n");
+                return NULL;
+            }
+
+            n = plainTextData.bufferSize;
+            memcpy(pBuf,plainTextData.textBuffer,n);
+
+            free(plainTextData.textBuffer);
+            plainTextData.textBuffer = NULL;
+            plainTextData.bufferSize = 0;
+            // ============decrypt end============
+            PyObject* v = PyMarshal_ReadObjectFromString(pBuf, n);
+            PyMem_FREE(pBuf);
+            return v;
+        }
+
+    }
+    /* We don't have fstat, or we do but the file is larger than
+     * REASONABLE_FILE_LIMIT or malloc failed -- read a byte at a time.
+     */
+    return PyMarshal_ReadObjectFromFile(fp);
+
+
+#undef REASONABLE_FILE_LIMIT
+}
+
 
 PyObject *
 PyMarshal_ReadObjectFromFile(FILE *fp)

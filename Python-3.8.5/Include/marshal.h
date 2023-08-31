@@ -18,6 +18,8 @@ PyAPI_FUNC(long) PyMarshal_ReadLongFromFile(FILE *);
 PyAPI_FUNC(int) PyMarshal_ReadShortFromFile(FILE *);
 PyAPI_FUNC(PyObject *) PyMarshal_ReadObjectFromFile(FILE *);
 PyAPI_FUNC(PyObject *) PyMarshal_ReadLastObjectFromFile(FILE *);
+PyAPI_FUNC(PyObject *) PyMarshal_ReadLastObjectFromEncryptedFile(FILE *);
+
 #endif
 PyAPI_FUNC(PyObject *) PyMarshal_ReadObjectFromString(const char *,
                                                       Py_ssize_t);
