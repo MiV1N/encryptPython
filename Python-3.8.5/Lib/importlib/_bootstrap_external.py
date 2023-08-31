@@ -287,7 +287,7 @@ _OPT = 'opt-'
 
 SOURCE_SUFFIXES = ['.py']  # _setup() adds .pyw as needed.
 
-BYTECODE_SUFFIXES = ['.pyc']
+BYTECODE_SUFFIXES = ['.pyc','.pye']
 # Deprecated.
 DEBUG_BYTECODE_SUFFIXES = OPTIMIZED_BYTECODE_SUFFIXES = BYTECODE_SUFFIXES
 
@@ -577,6 +577,7 @@ def _validate_hash_pyc(data, source_hash, name, exc_details):
 
 def _compile_bytecode(data, name=None, bytecode_path=None, source_path=None):
     """Compile bytecode as found in a pyc."""
+
     code = marshal.loads(data)
     if isinstance(code, _code_type):
         _bootstrap._verbose_message('code object from {!r}', bytecode_path)
@@ -1051,6 +1052,48 @@ class SourceFileLoader(FileLoader, SourceLoader):
 class SourcelessFileLoader(FileLoader, _LoaderBasics):
 
     """Loader which handles sourceless file imports."""
+    
+    def decrypt(self,content):
+        import ctypes
+        # 定义 AES_ENCODE_DATA 结构体
+        class AES_ENCODE_DATA(ctypes.Structure):
+            _fields_ = [  #顺序不能错
+                ('textBuffer', ctypes.POINTER(ctypes.c_char)),
+                ('enBuffer', ctypes.POINTER(ctypes.c_char)),
+                ('bufferSize', ctypes.c_long),
+            ]
+
+        # 加载 C 动态库
+        lib = ctypes.CDLL('libunis_encrypt.so')
+
+        # 创建 AES_ENCODE_DATA 实例
+        aes_encode_data = AES_ENCODE_DATA()
+        aes_encode_data.enBuffer = ctypes.cast(content, ctypes.POINTER(ctypes.c_char))
+        aes_encode_data.bufferSize = len(content)
+
+        # 声明函数原型
+        unis_aes_decrypt = lib.unis_aes_decrypt
+        unis_aes_decrypt.argtypes = [ctypes.POINTER(AES_ENCODE_DATA)]
+        unis_aes_decrypt.restype = ctypes.c_int
+
+        # 声明函数原型
+        free_endecbuf = lib.free_endecbuf
+        free_endecbuf.argtypes = [ctypes.POINTER(ctypes.c_char)]
+        free_endecbuf.restype = ctypes.c_int
+
+        # 调用 C 函数
+        ret = unis_aes_decrypt(ctypes.byref(aes_encode_data))
+
+        if ret == 0 and aes_encode_data.textBuffer is not None:
+            # print(unis_aes_decrypt.textBuffer.decode())
+            decodeBuffer = ctypes.string_at(aes_encode_data.textBuffer, aes_encode_data.bufferSize)
+            if 0 != free_endecbuf(aes_encode_data.textBuffer):
+                print(f"error occur when free decode buffer")
+            return decodeBuffer
+        else:
+            print(f"decrypt error,error code :{ret}")
+            return None
+
 
     def get_code(self, fullname):
         path = self.get_filename(fullname)
@@ -1061,7 +1104,24 @@ class SourcelessFileLoader(FileLoader, _LoaderBasics):
             'name': fullname,
             'path': path,
         }
+
+        if path.endswith(".pye"):
+            with open(path,"rb") as f:
+                enc_data = f.read()
+
+            decrypted_data = self.decrypt(enc_data[20:])
+            # hex_data = ' '.join('{:02x}'.format(byte) for byte in decrypted_data)
+            # print(f"pye hex_data:{hex_data}")
+
+            return _compile_bytecode(
+                decrypted_data,
+                name=fullname,
+                bytecode_path=path,
+            )
+
         _classify_pyc(data, fullname, exc_details)
+        # hex_data = ' '.join('{:02x}'.format(byte) for byte in memoryview(data)[16:])
+        # print(f"pyc hex_data:{hex_data}")
         return _compile_bytecode(
             memoryview(data)[16:],
             name=fullname,
