@@ -1,24 +1,24 @@
 #! /bin/bash
 set -e
-python3 create_key.py
-mv secret_key.h inc/
 
-build_dir="build"
+CSD=$(dirname "$(readlink -f "$0")") #current script dir
+
+cd ${CSD} && python3 ${CSD}/create_key.py #生成secret_key.h
+mv ${CSD}/secret_key.h ${CSD}/inc/
+
+BUILD_DIR="${CSD}/build"
 
 # 检查 build 目录是否存在
-if [ -d "$build_dir" ]; then
+if [ -d "$BUILD_DIR" ]; then
   # 如果存在，则删除 build 目录
-  rm -rf "$build_dir"
+  rm -rf "$BUILD_DIR"
 fi
 
 # 创建新的 build 目录
-mkdir "$build_dir"
-cd build
-cmake ..
-make 
-make install
-# find ./ -name "secret_key.h" |xargs -I {} rm -f {}
+mkdir -p "$BUILD_DIR"
+cd $BUILD_DIR
+cmake .. && make -j && make install
 
 echo "======================================================"
-echo "all build files you can find in build/unis_crypt_dist."
+echo "all build files you can find in $BUILD_DIR/unis_crypt_dist."
 echo "======================================================"

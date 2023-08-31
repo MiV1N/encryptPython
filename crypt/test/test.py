@@ -1,5 +1,7 @@
 
 import test2
+
+print("执行.pye文件成功")
 # import sys
 
 # print(sys.path)

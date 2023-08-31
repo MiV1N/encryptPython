@@ -7,6 +7,9 @@
 # 比如： sh test.sh ~/test/python3.8.5/Python-3.8.5/dist/bin/python3 
 ##########################################################################
 
+set -e
+
+CSD=$(dirname "$(readlink -f "$0")") #current script dir
 
 # 检查参数是否为空
 if [ -z "$1" ]; then
@@ -15,15 +18,15 @@ if [ -z "$1" ]; then
 fi
 
 # 获取Python解释器路径
-python_path="$1"
+PATHON_PATH="$1"
 
 
 # 提取给定路径的父目录
-parent_dir="$(dirname "$python_path")"
+PYTHON_PARENT_DIR="$(dirname "$PATHON_PATH")"
 # 修改上层目录为"lib"
-lib_dir="${parent_dir%/*}/lib"
+PYTHON_LIB_PATH="${PYTHON_PARENT_DIR%/*}/lib"
 # 设置LD_LIBRARY_PATH环境变量
-export LD_LIBRARY_PATH="$lib_dir"
+export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${PYTHON_LIB_PATH}"
 # 打印设置后的LD_LIBRARY_PATH环境变量值
 echo "LD_LIBRARY_PATH设置为: $LD_LIBRARY_PATH"
 
@@ -47,12 +50,15 @@ compile_files() {
             # echo "filename:${filename}"
             # echo "dist_subdir:${dist_subdir}"
             mkdir -p "$dist_subdir"
-            "$python_path" -m compileall -b -f -q "$file" -d "$dist_subdir"
+            "$PATHON_PATH" -m compileall -b -f -q "$file" -d "$dist_subdir"
             mv "${file}c" "$dist_subdir/${filename}c"
         fi
     done
 }
 
+
+
+cd $CSD
 # 源目录和dist目录的路径，请根据实际情况修改
 source_directory="./"
 dist_directory="./dist"
@@ -62,5 +68,5 @@ rm -rf $dist_directory
 compile_files "$source_directory" "$dist_directory"
 
 #转换为pye
-./../build/unis_crypt_dist/bin/scan_encrypt $dist_directory
+${PYTHON_PARENT_DIR}/scan_encrypt $dist_directory
 find $dist_directory -name "*.pyc" -delete

@@ -5648,7 +5648,7 @@ AC_DEFINE(PY_SSL_DEFAULT_CIPHERS, 1)
 
 
 # 添加 unis_crypt_dist/inc 目录到 include 路径
-CPPFLAGS="$CPPFLAGS -Iunis_crypt_dist/inc"
+CPPFLAGS="$CPPFLAGS -Iunis_crypt_dist/include"
 
 # 添加链接 libunis_encrypt. 动态库
 LIBS="$LIBS -L ${PWD}/unis_crypt_dist/lib -l unis_encrypt"

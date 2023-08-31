@@ -72,7 +72,7 @@ install(TARGETS test_unis_encrypt unis_encrypt scan_encrypt
 )
 
 # 安装头文件到指定路径
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/inc
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include
   DESTINATION ${CMAKE_INCLUDE_OUTPUT_DIRECTORY}
   FILES_MATCHING PATTERN "*.h"
 )
