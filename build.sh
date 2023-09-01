@@ -21,5 +21,5 @@ find ./ -name "secret_key.h" |xargs -I {} rm -f {}
 bash ${CRYPT_TOOL_PATH}/test/test.sh  ${PYTHON_INSTALL_PATH}/bin/python3
 echo "#############################################"
 echo "可以执行以下命令测试是否可以成功加载pye文件"
-echo "${PYTHON_INSTALL_PATH}/bin/python3  ${CRYPT_TOOL_PATH}/test/dist/test.pye"
+echo "export LD_LIBRARY_PATH="${PYTHON_INSTALL_PATH}/lib" ; ${PYTHON_INSTALL_PATH}/bin/python3  ${CRYPT_TOOL_PATH}/test/dist/test.pye"
 echo "#############################################"

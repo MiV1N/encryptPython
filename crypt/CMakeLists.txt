@@ -34,7 +34,7 @@ add_subdirectory(openaes)
 
 include_directories (
 		${CMAKE_CURRENT_SOURCE_DIR}/openaes/inc
-		${CMAKE_CURRENT_SOURCE_DIR}/inc
+		${CMAKE_CURRENT_SOURCE_DIR}/include
 	)
 
 set (LIB_SRC

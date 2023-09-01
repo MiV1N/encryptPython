@@ -4,7 +4,7 @@ set -e
 CSD=$(dirname "$(readlink -f "$0")") #current script dir
 
 cd ${CSD} && python3 ${CSD}/create_key.py #生成secret_key.h
-mv ${CSD}/secret_key.h ${CSD}/inc/
+mv ${CSD}/secret_key.h ${CSD}/include/
 
 BUILD_DIR="${CSD}/build"
 

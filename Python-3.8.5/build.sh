@@ -12,15 +12,11 @@ echo "LD_LIBRARY_PATH设置为: $LD_LIBRARY_PATH"
 PYTHON_INSTALL_PATH=$1
 
 cd ${CSD} 
+rm  configure   #删除一下configure，避免configure.ac的改动没有更新到configure里面
 autoconf 
 ./configure --prefix="${PYTHON_INSTALL_PATH}"
 
-make -j8  #编译python解释器
-PATH_BACK=${PATH}
-cp python python3           #生成importlib会用到python3命令
-export PATH=${CSD}:${PATH}  #将python解释器添加到路径中，由于我们可能有操作码的替换，需要放在前面
-
-make regen-importlib  #重新生成 _frozen的importlib
+make regen-importlib  #重新生成 _frozen的importlib (操作码的替换+import解密流程)，这里需要有可以执行的python命令
 make -j8 
 make install
 # # 检查退出状态码
@@ -29,10 +25,9 @@ make install
 #   exit 1
 # fi
 
-export PATH=${PATH_BACK} #恢复环境变量
-
 # 拷贝共享库到发布目录
-cp -r ${CSD}/unis_crypt_dist/*  ${PYTHON_INSTALL_PATH}
+cp -r ${CSD}/unis_crypt_dist/lib  ${PYTHON_INSTALL_PATH}
+cp -r ${CSD}/unis_crypt_dist/bin  ${PYTHON_INSTALL_PATH}
 
 
 echo "===================================================="
