@@ -18,6 +18,7 @@ fi
 mkdir -p "$BUILD_DIR"
 cd $BUILD_DIR
 cmake .. && make -j && make install
+cp ${CSD}/test/py2pye.sh ${BUILD_DIR}/unis_crypt_dist/bin/
 
 echo "======================================================"
 echo "all build files you can find in $BUILD_DIR/unis_crypt_dist."

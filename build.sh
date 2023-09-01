@@ -18,7 +18,7 @@ find ./ -name "secret_key.h" |xargs -I {} rm -f {}
 
 
 # 在crypt/test/dist 下生成测试用的pye文件 #########################
-bash ${CRYPT_TOOL_PATH}/test/test.sh  ${PYTHON_INSTALL_PATH}/bin/python3
+bash ${CRYPT_TOOL_PATH}/test/py2pye.sh  ${PYTHON_INSTALL_PATH}/bin/python3
 echo "#############################################"
 echo "可以执行以下命令测试是否可以成功加载pye文件"
 echo "export LD_LIBRARY_PATH="${PYTHON_INSTALL_PATH}/lib" ; ${PYTHON_INSTALL_PATH}/bin/python3  ${CRYPT_TOOL_PATH}/test/dist/test.pye"
